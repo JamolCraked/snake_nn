@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Snake NN Trainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Snake — Neural Network Trainer (Frontend only)</h1>
+  </header>
+
+  <main>
+    <section id="controls">
+      <div class="panel">
+        <h2>Network Configuration</h2>
+        <label>Hidden layers: <input id="layers" type="range" min="0" max="4" value="1" /></label>
+        <label>Neurons per layer: <input id="neurons" type="range" min="1" max="32" value="8" /></label>
+        <label>Population: <input id="population" type="number" min="4" max="128" value="24" /></label>
+        <label>Mutation rate: <input id="mutation" type="range" min="0" max="1" step="0.01" value="0.1" /></label>
+        <label>Max steps per agent: <input id="maxSteps" type="number" min="10" max="5000" value="200" /></label>
+        <label>Speed (steps/frame): <input id="speed" type="range" min="1" max="20" value="4" /></label>
+        <div class="inputs">
+          <h3>Input variables</h3>
+          <label><input type="checkbox" class="input-var" value="dir" checked /> Direction (one-hot)</label>
+          <label><input type="checkbox" class="input-var" value="foodVec" checked /> Food vector (dx,dy)</label>
+          <label><input type="checkbox" class="input-var" value="distFood" /> Distance to food</label>
+          <label><input type="checkbox" class="input-var" value="vision" checked /> Vision (ahead,left,right obstacle)</label>
+        </div>
+        <div class="buttons">
+          <button id="start">Start</button>
+          <button id="pause">Pause</button>
+          <button id="reset">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel" id="statusPanel">
+        <h2>Training Status</h2>
+        <div>Generation: <span id="generation">0</span></div>
+        <div>Best fitness: <span id="bestFitness">0</span></div>
+        <div>Best score: <span id="bestScore">0</span></div>
+        <div>Epoch progress: <progress id="genProgress" value="0" max="100"></progress> <span id="progressPct">0%</span></div>
+        <div>Connection: <span id="connStatus">local</span></div>
+      </div>
+
+      <div class="panel" id="weightsPanel">
+        <h2>Best Agent Weights & Activations</h2>
+        <div id="weightsView">No data yet</div>
+      </div>
+    </section>
+
+    <section id="arena">
+      <h2>Population</h2>
+      <div id="games"></div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Frontend-only demo — uses evolutionary training (mutation & selection).</small>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
