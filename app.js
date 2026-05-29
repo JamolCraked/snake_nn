@@ -26,9 +26,25 @@ class NeuralNetwork {
     const b = this.biases.map(layer=>layer.slice());
     return new NeuralNetwork(this.sizes, w, b);
   }
+  totalParams(){
+    return this.weights.reduce((sum, layer) => sum + layer.reduce((s, row) => s + row.length, 0), 0)
+      + this.biases.reduce((sum, layer) => sum + layer.length, 0);
+  }
   mutate(rate){
-    this.weights.forEach(layer=>layer.forEach(row=>row.forEach((v,i,arr)=>{ if(Math.random()<rate) arr[i]+= (Math.random()*2-1)*0.1 })));
-    this.biases.forEach(layer=>layer.forEach((v,i,arr)=>{ if(Math.random()<rate) arr[i]+= (Math.random()*2-1)*0.1 }));
+    const total = this.totalParams();
+    if(total === 0 || rate <= 0) return;
+    const normalizedRate = Math.min(rate / Math.sqrt(total / 10), 1);
+    const mutateCount = Math.max(1, Math.round(total * normalizedRate));
+    const params = [];
+    this.weights.forEach((layer, li) => layer.forEach((row, ri) => row.forEach((_v, ci) => params.push({type:'w', li, ri, ci}))));
+    this.biases.forEach((layer, li) => layer.forEach((_v, bi) => params.push({type:'b', li, bi})));
+    for(let i = 0; i < mutateCount && params.length; i++){
+      const idx = Math.floor(Math.random() * params.length);
+      const p = params.splice(idx, 1)[0];
+      const delta = (Math.random() * 2 - 1) * 0.1;
+      if(p.type === 'w') this.weights[p.li][p.ri][p.ci] += delta;
+      else this.biases[p.li][p.bi] += delta;
+    }
   }
 }
 
@@ -182,8 +198,8 @@ const UI = {
   bind(){ document.getElementById('start').addEventListener('click',()=>this.start()); document.getElementById('pause').addEventListener('click',()=>this.pause()); document.getElementById('reset').addEventListener('click',()=>this.reset()); document.getElementById('toggleVisual').addEventListener('click',()=>this.toggleVisual()); },
   updateVisualButton(){ const btn = document.getElementById('toggleVisual'); if(!btn) return; btn.textContent = this.renderEnabled ? 'Visual mode: ON' : 'Visual mode: OFF'; },
   toggleVisual(){ this.renderEnabled = !this.renderEnabled; this.gamesEl.style.display = this.renderEnabled ? '' : 'none'; this.updateVisualButton(); },
-  readConfig(){ const inp = Array.from(document.querySelectorAll('.input-var:checked')).map(el=>el.value); const population = Number(document.getElementById('population').value); const mutation = Number(document.getElementById('mutation').value); const maxSteps = Number(document.getElementById('maxSteps').value); return {inputs:inp, population, mutationRate:mutation, maxSteps, inputsCount:()=>{ let c=0; if(inp.includes('dir')) c+=4; if(inp.includes('foodVec')) c+=2; if(inp.includes('distFood')) c+=1; if(inp.includes('vision')) c+=6; return c }}; },
-  async start(){ if(this.running) return; this.running=true; const cfg = this.readConfig(); cfg.population = cfg.population; cfg.mutationRate = cfg.mutationRate; cfg.maxSteps = cfg.maxSteps; cfg.inputsCount = cfg.inputsCount; cfg.inputs = cfg.inputs; document.getElementById('generation').textContent='0'; this.evolver = new Evolver(cfg); this.evolver.init(); this.createCanvasCards(this.evolver.population.length); this.gamesEl.style.display = this.renderEnabled ? '' : 'none'; while(this.running){ const res = await this.evolver.runOneGenerationAnimated(this); this.updateUI(res); await this._shortDelay(50); } },
+  readConfig(){ const inp = Array.from(document.querySelectorAll('.input-var:checked')).map(el=>el.value); const population = Math.max(4, Number(document.getElementById('population').value)); const mutation = Math.min(Math.max(Number(document.getElementById('mutation').value), 0), 1); const maxSteps = Math.max(10, Number(document.getElementById('maxSteps').value)); return {inputs:inp, population, mutationRate:mutation, maxSteps, inputsCount:()=>{ let c=0; if(inp.includes('dir')) c+=4; if(inp.includes('foodVec')) c+=2; if(inp.includes('distFood')) c+=1; if(inp.includes('vision')) c+=6; return c }}; },
+  async start(){ if(this.running) return; const cfg = this.readConfig(); if(cfg.inputsCount() === 0){ alert('Select at least one input variable before training.'); return; } this.running=true; cfg.population = cfg.population; cfg.mutationRate = cfg.mutationRate; cfg.maxSteps = cfg.maxSteps; cfg.inputsCount = cfg.inputsCount; cfg.inputs = cfg.inputs; document.getElementById('generation').textContent='0'; this.evolver = new Evolver(cfg); this.evolver.init(); this.createCanvasCards(this.evolver.population.length); this.gamesEl.style.display = this.renderEnabled ? '' : 'none'; while(this.running){ const res = await this.evolver.runOneGenerationAnimated(this); this.updateUI(res); await this._shortDelay(50); } },
   pause(){ this.running=false },
   reset(){ this.pause(); this.evolver=null; this.gamesEl.innerHTML=''; this.weightsView.textContent='No data yet'; document.getElementById('generation').textContent='0'; this.bestFitnessEl.textContent='0'; this.bestScoreEl.textContent='0' },
   updateUI(res){ this.generationEl.textContent = res.generation; this.bestFitnessEl.textContent = Math.round(res.best.fitness); this.bestScoreEl.textContent = res.best.score; const nn = res.best.nn; this.weightsView.textContent = 'Sizes: '+nn.sizes.join(',')+"\n\nWeights:\n"+JSON.stringify(nn.weights.map(l=>l.map(r=>r.map(v=>+v.toFixed(2)))),null,2)+"\n\nBiases:\n"+JSON.stringify(nn.biases.map(l=>l.map(v=>+v.toFixed(2))),null,2); if(this.canvasCards) this.canvasCards.forEach((c,i)=>{ c.canvas.classList.toggle('best', i===0); }); },
